@@ -1,29 +1,37 @@
 {
-	"name": "financial-os",
-	"private": true,
-	"version": "0.0.0",
-	"type": "module",
-	"scripts": {
-		"dev": "vite",
-		"build": "tsc -b && vite build",
-		"lint": "oxlint",
-		"preview": "pnpm run build && vite preview",
-		"deploy": "pnpm run build && wrangler deploy",
-		"cf-typegen": "wrangler types"
-	},
-	"dependencies": {
-		"react": "^19.2.8",
-		"react-dom": "^19.2.8"
-	},
-	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.62.4",
-		"@types/node": "^24.13.3",
-		"@types/react": "^19.2.18",
-		"@types/react-dom": "^19.2.7",
-		"@vitejs/plugin-react": "^6.1.1",
-		"oxlint": "^1.81.0",
-		"typescript": "~6.0.2",
-		"vite": "^8.3.0",
-		"wrangler": "^4.146.0"
-	}
+  "name": "financial-os",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "build": "tsc -b && vp build",
+    "lint": "vp lint",
+    "preview": "pnpm run build && vp preview",
+    "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "prepare": "vp config"
+  },
+  "dependencies": {
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.62.4",
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "@vitejs/plugin-react": "^6.1.1",
+    "typescript": "~6.0.2",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
+    "wrangler": "^4.146.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.8.1",
+      "onFail": "download"
+    }
+  }
 }
