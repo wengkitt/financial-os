@@ -44,7 +44,11 @@ describe("Worker API", () => {
   });
 
   it("does not handle writes to the read-only endpoint", async () => {
-    const response = await app.request("/api", { method: "POST" });
+    const response = await app.request("http://localhost/api", {
+      method: "POST",
+      headers: { Origin: "http://localhost", "Content-Type": "application/json" },
+      body: "{}",
+    });
 
     expect(response.status).toBe(404);
   });

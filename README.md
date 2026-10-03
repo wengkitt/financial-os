@@ -1,229 +1,142 @@
-# React + TypeScript + Vite
+# Financial OS
 
-## PostgreSQL: Neon, Drizzle, and Hyperdrive
+A personal finance application built with React, TanStack Router/Query/Form, Zod,
+shadcn Base UI, Hono, Drizzle, and PostgreSQL on Neon. Vite+ (`vp`) manages the toolchain.
 
-The Worker uses Drizzle ORM's `node-postgres` adapter with `pg`. Hyperdrive
-maintains the connection pool between Cloudflare and Neon. It is recommended for
-this Workers deployment, although Neon can also be used without Hyperdrive via
-its serverless driver. See the
-[Cloudflare Drizzle guide](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/)
-and [Neon connection guide](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-database-providers/neon/).
+## What it does
 
-### Connect your database
+- Record income and expenses in wallets, categories, and Spaces. Edit and delete records.
+- Track bank, cash, and e-wallet balances, transfers, and documented balance corrections.
+- Use MYR, NZD, USD, SGD, AUD, EUR, GBP, JPY, CAD, THB, IDR, CNY, and HKD wallets.
+- Set monthly expense-category budgets and total lifetime Space budgets.
+- Track monthly recurring payments, confirm actual payments, skip occurrences, and pause schedules.
+- Compare income, preparation costs, running expenses, and final results for a trip or project.
+- Filter transactions and export CSV records.
+- Register, verify email, sign in with username or email, and recover passwords.
 
-1. Create a Neon project and a development branch. Copy the **direct** connection
-   URL with connection pooling unchecked (the hostname should not contain
-   `-pooler`). Keep TLS enabled with `sslmode=require`. Hyperdrive handles pooling.
-2. Copy `.env.example` to `.env`. Set `DATABASE_URL` to the direct URL used by
-   Drizzle Kit. Set `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` to
-   the development branch URL for the local Worker. Vite's Cloudflare plugin
-   loads this override from `.env`. The two URLs may point to different branches;
-   run migrations against the branch your Worker will use.
-3. Create a Hyperdrive configuration in the Cloudflare dashboard using the
-   production Neon direct URL and **disable query caching**. This keeps reads
-   current while retaining connection pooling. Alternatively, with Wrangler
-   authenticated, run these commands in your own terminal to use the URL from
-   your `.env`:
+Each user has one ledger and an Everyday Space. Each income/expense belongs to
+one Space and one wallet. Space reports include only their assigned transactions;
+overall reports include every transaction once. Wallets are shared across Spaces.
 
-   ```sh
-   set -a
-   source .env
-   set +a
-   vp run hyperdrive:create --connection-string="$DATABASE_URL"
-   ```
+Trip result = income − running expenses − preparation expenses. Preparation
+costs can precede the trip dates and remain included. Opening balances, transfers,
+and corrections affect wallets without inflating income, expenses, or budgets.
+Manual conversion rates are stored with transactions; historical totals do not
+change when later rates change. Reporting currency is fixed once wallets or
+budgets exist. Wallet balances remain in their original currency.
 
-4. Replace the all-zero placeholder `hyperdrive[0].id` in `wrangler.jsonc` with
-   the returned configuration ID, keeping the binding name `HYPERDRIVE`.
-   Run `vp run cf-typegen` after changing bindings. The placeholder supports
-   local development only; deployment requires a real configuration ID.
-5. Run `vp run dev`, then request `/api/health/db`. A successful `SELECT 1`
-   returns `{ "status": "ok" }`; connection/query failures return 503 with
-   `{ "status": "unavailable" }`. This endpoint needs no application tables.
+## Local development
 
-`.env` is ignored by Git. Never put a real connection URL into Wrangler config
-or a `VITE_` variable. Production database credentials are stored in Hyperdrive;
-the Worker does not need a `DATABASE_URL` secret. The committed local URL points
-to `127.0.0.1` with example credentials and is overridden by your `.env` setting.
-Local development connects directly to the database and does not emulate
-Hyperdrive's pooling or caching. See
-[Hyperdrive local development](https://developers.cloudflare.com/hyperdrive/configuration/local-development/).
+1. Run `vp install`.
+2. Copy `.env.example` to `.env` and configure the development Neon connection.
+3. Run `vp run db:migrate` against the development branch.
+4. Configure authentication email as described below.
+5. Run `vp run dev` and open its printed URL.
 
-### Schema and migrations
+`DATABASE_URL` and
+`CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` must target the Neon
+**development branch**. Use a direct connection URL with TLS (`sslmode=require`)
+and Neon connection pooling unchecked. The local Worker override connects
+directly, bypassing Hyperdrive pooling and caching. Keep credentials out of
+committed files, logs, client bundles, and `VITE_` variables.
 
-Define and export tables in `worker/db/schema.ts` using `drizzle-orm/pg-core`.
-The schema starts empty because no application tables have been specified yet.
-After defining your first table:
+`GET /api/health/db` checks the database connection. The application lives under
+`/app`; unverified users are redirected to email verification. New accounts default
+to MYR reporting and Asia/Kuala_Lumpur, selectable during registration. Financial
+dates are `yyyy-MM-dd`; calendar boundaries follow the account timezone. Display
+helpers use date-fns; security timestamps are UTC.
+
+## Email verification and recovery
+
+Set these server-only variables in `.env` for local development:
+
+- `APP_ORIGIN`: exact browser origin, such as `http://localhost:5173`. If Vite uses
+  another port or you use `127.0.0.1`, update this value to match. It controls both
+  email links and mutation origin checks. Restart development after changing it.
+- `RESEND_API_KEY`: a Resend API key authorized to send email.
+- `EMAIL_FROM`: sender address on your verified Resend domain.
+
+Registration creates an unverified account and a seven-day cookie session.
+Financial APIs stay inaccessible until verification succeeds. Verification links
+expire after 24 hours; reset links expire after one hour. Links are single-use;
+resending replaces the previous verification link. Missing email configuration or
+failed delivery leaves the account unverified and allows retrying delivery.
+Recovery responses remain generic to avoid disclosing registered email addresses.
+
+Passwords use salted scrypt (`N=16384`, `r=8`, `p=5`) and constant-time comparison.
+Session and email token hashes are stored server-side; raw session cookies are
+HttpOnly, SameSite=Lax, and Secure over HTTPS. Logout revokes the current session;
+password reset revokes all sessions. Authentication throttles are persistent across
+requests. Mutations require same-origin JSON requests. Private responses are not cached.
+
+For production, configure `APP_ORIGIN` and `EMAIL_FROM` as Worker variables and
+store `RESEND_API_KEY` using `vp exec wrangler secret put RESEND_API_KEY`.
+Registration email is transactional; recurring payment reminders are in-app only.
+
+## Database and deployment
+
+Tables live in `worker/db/schema.ts`; migrations and snapshots live in `drizzle/`.
+Database access uses the request-scoped `withDatabase` helper with Drizzle's
+node-postgres adapter. Each operation closes its client. Financial writes use
+transactions and account locks; ownership is checked in APIs and composite
+foreign keys. Recurring confirmations have a unique schedule/due-date constraint.
+
+After schema changes:
 
 ```sh
 vp run db:generate
-# Review and commit the SQL and snapshots generated under drizzle/.
 vp run db:check
 vp run db:migrate
 ```
 
-Generation works offline; migration and Studio require a valid `DATABASE_URL`
-in `.env` or the shell environment. `vp run db:studio` opens Drizzle Studio.
-Apply reviewed migrations against the intended Neon branch before deploying
-code that relies on them. Migrations run directly from the CLI, never from a
-Worker request. No migrations are generated or applied by build/deploy.
+Review generated SQL before applying it. Drizzle Kit reads `DATABASE_URL`
+independently of Hyperdrive. Local migration defaults target development.
 
-Use the request-scoped helper in API handlers:
+Production Workers use the configured `HYPERDRIVE` binding in `wrangler.jsonc`
+with `nodejs_compat`, pointing to the **production Neon branch**. Configure it with
+the production direct TLS URL and disable Hyperdrive query caching. Runtime code
+uses `pg`, not the Neon serverless driver. Production needs no `DATABASE_URL`
+Worker secret.
 
-```ts
-import { withDatabase } from "./db/index.ts";
-import { accounts } from "./db/schema.ts"; // Your own exported table.
+Apply reviewed migrations separately with an explicitly supplied production
+`DATABASE_URL`, before deploying dependent Worker code. Do not retarget `.env`.
+Deployment never runs migrations. Preserve compatibility during rollout. Once
+production configuration is ready, use `vp run deploy`.
 
-app.get("/api/accounts", async (c) => {
-  const rows = await withDatabase(c.env, (db) => db.select().from(accounts));
-  return c.json(rows);
-});
+## Validation
+
+```sh
+vp check
+vp test
+vp run build
+vp run db:check
 ```
 
-The helper closes the client even when connecting or querying fails. Use one
-callback for related queries and `db.transaction` for atomic writes. Do not
-share clients across Worker requests. Validate external inputs and query results
-with Zod, and add authorization before exposing application data endpoints.
+Unit tests cover exact money arithmetic, Space totals, wallet movements, monthly
+budgets, month-end anchors, timezone boundaries, validation, CSV safety, password
+hashing, and routes.
 
-## Routing
+Run the opt-in database workflow suite against development:
 
-The React app uses TanStack Router with file-based routes in `src/routes`.
-`src/routes/__root.tsx` provides the shared layout and 404 fallback, while
-`src/routes/index.tsx` renders the existing app at `/`. The typed router is
-configured in `src/router.ts` and mounted with `RouterProvider` in `src/main.tsx`.
-
-Run `vp run dev` to generate and watch routes. Add a file such as
-`src/routes/about.tsx` that exports `Route = createFileRoute("/about")({ component: About })`
-to create a page. Import `createFileRoute` and `Link` from `@tanstack/react-router`
-and use `<Link to="/about">About</Link>` for client-side navigation.
-
-The Vite plugin generates `src/routeTree.gen.ts` during development and builds
-and automatically splits route components. Commit the generated tree so the
-build script's TypeScript check can run before Vite; do not edit it manually.
-See the [TanStack Router Vite guide](https://tanstack.com/router/latest/docs/installation/with-vite).
-
-## Server state
-
-TanStack Query manages server state through a shared `QueryClient` in
-`src/lib/query-client.ts`. `QueryClientProvider` wraps the router in `src/main.tsx`,
-and the same client is available in typed route context for future loaders.
-Queries stay fresh for 30 seconds; other retry, garbage collection, and
-refetch settings use TanStack Query's defaults.
-
-Define reusable query keys and fetch functions with `queryOptions` under
-`src/queries`. For example, `src/queries/api-name.ts` fetches `/api/`, checks
-HTTP errors and the response shape, and passes the query's abort signal to fetch.
-Use it in a component:
-
-```tsx
-import { useQuery } from "@tanstack/react-query";
-import { apiNameQueryOptions } from "@/queries/api-name";
-
-const nameQuery = useQuery(apiNameQueryOptions);
+```sh
+FINANCIAL_OS_DB_TESTS=1 vp test worker/integration.test.ts
 ```
 
-The home page loads the name automatically, displays loading and error states,
-and lets you refresh it. Keep local UI state, such as the counter, in React state.
-For write endpoints, use `useMutation` and invalidate the affected query keys in
-`onSuccess` with `queryClient.invalidateQueries({ queryKey: apiNameQueryOptions.queryKey })`.
-Route loaders can reuse the same options with
-`context.queryClient.ensureQueryData(apiNameQueryOptions)`.
+The suite requires matching development database and local Worker URLs. It creates
+uniquely named fixtures, mocks Resend delivery in memory, tests verification,
+recovery, ownership, transfers, budgets, and concurrent confirmations, then removes
+its own financial fixtures. It never sends real email. Do not run it against production.
 
-See the [TanStack Query quick start](https://tanstack.com/query/latest/docs/framework/react/quick-start).
+## First-version boundaries
 
-## Forms and validation
+Transactions and reports load the current user's ledger together; pagination and
+server-side aggregate optimization can be added when ledger sizes warrant them.
+Rates are entered manually. Recurring schedules are monthly and reminders appear
+in the app. Archived wallets/categories preserve history and cannot receive new
+entries until restored. Changing a recurring monthly anchor requires pausing the
+old schedule and creating a new one. Deleting a confirmed payment makes its
+occurrence due again. Referenced Spaces cannot be deleted; mark them completed to
+retain history.
 
-TanStack Form and Zod power the example at `/form-demo`, linked from the home
-page. `src/components/profile-form.tsx` uses shadcn's Base UI `Field`, `Input`,
-`Button`, and `Card` components. Each control connects to `form.Field` through
-its value, change handler, and blur handler. Labels, descriptions, inline
-`FieldError` messages, and `aria-invalid` provide accessible validation feedback.
-
-`src/forms/profile-form-options.ts` contains the Zod schema, inferred value
-type, defaults, and reusable `formOptions`. The schema is passed directly to
-TanStack Form's `onChange` and `onSubmit` validators through Standard
-Schema. No Zod adapter or global form provider is needed.
-
-Errors appear after a field is touched or the form is submitted. The demo uses
-`noValidate` so Zod's inline messages handle invalid submissions; the inputs
-still declare `required`, `type`, and length constraints. Reset clears values,
-errors, and the submitted preview. Submission validates locally and displays a
-preview; it does not save a profile. Zod transforms are applied explicitly with
-`profileSchema.parse(value)` in the submit handler.
-
-For a real write endpoint, call a TanStack Query mutation's `mutateAsync(value)`
-inside `onSubmit` and invalidate affected queries after success. Keep server
-validation in that endpoint as well.
-
-See the [shadcn TanStack Form guide](https://ui.shadcn.com/docs/forms/tanstack-form).
-
-## Dates
-
-Use `date-fns` for all date parsing, formatting, validation, comparisons, and
-arithmetic. Common helpers live in `src/lib/date.ts`:
-
-```ts
-import { formatDate, formatDateTime, parseDate } from "@/lib/date";
-import { addDays, formatISO, isBefore } from "date-fns";
-
-formatDate("2026-10-03"); // "03 Oct 2026"
-formatDateTime("2026-10-03T14:05:00"); // "03 Oct 2026 14:05"
-const nextDay = addDays(parseDate("2026-10-03"), 1);
-isBefore(parseDate("2026-10-03"), nextDay); // true
-formatISO(nextDay, { representation: "date" }); // "2026-10-04"
-```
-
-`parseDate` accepts ISO 8601 strings, Date objects, and millisecond timestamps.
-Invalid inputs throw `RangeError`; validate optional or user-entered values
-before formatting them. Keep date-only values as `yyyy-MM-dd`; parsing them
-with `parseISO` preserves the local calendar date. API timestamps should include
-an explicit offset or `Z`. Display helpers use the browser/runtime's local time
-zone and the formats `dd MMM yyyy` and `dd MMM yyyy HH:mm`.
-
-Import additional operations directly from `date-fns`. Use `yyyy` and `dd` for
-calendar-year and day-of-month tokens. See the [date-fns documentation](https://date-fns.org/).
-
-## Worker API
-
-The Cloudflare Worker in `worker/index.ts` uses [Hono](https://hono.dev/docs/getting-started/cloudflare-workers).
-Run `vp run dev` to start the React app and Worker together. `GET /api` and
-`GET /api/` return `{ "name": "Cloudflare" }`. Unknown API routes return a JSON
-404 response. Wrangler sends `/api` and `/api/*` requests to the Worker first;
-other paths use the React static assets and SPA fallback.
-
-Add endpoints with `app.get("/api/example", (c) => c.json({ ok: true }))` in
-`worker/index.ts`. Cloudflare bindings are typed with the generated `Env` type
-and accessed through `c.env`. After changing bindings in `wrangler.jsonc`, run
-`vp run cf-typegen` to regenerate their types.
-
-Validate changes with `vp check`, `vp test`, and `vp run build`.
-
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Bank feeds, savings goals, debts, receipt uploads, imports, shared finances, and
+email payment reminders are deferred.

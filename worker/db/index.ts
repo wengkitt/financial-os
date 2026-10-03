@@ -7,6 +7,7 @@ function createDatabase(client: Client) {
 }
 
 export type Database = ReturnType<typeof createDatabase>;
+export type DatabaseExecutor = Database | Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 // Connections belong to one Worker request. Hyperdrive pools the origin connections.
 export async function withDatabase<T>(

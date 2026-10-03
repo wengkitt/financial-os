@@ -128,3 +128,102 @@
     @apply font-sans;
   }
 }
+
+@layer components {
+  .auth-layout {
+    @apply min-h-dvh flex flex-col items-center justify-center gap-6 bg-sidebar px-4 py-10;
+  }
+  .auth-brand {
+    @apply flex items-center gap-2 text-lg font-semibold tracking-tight;
+  }
+  .app-topbar {
+    @apply flex h-14 shrink-0 items-center gap-3 border-b px-5;
+  }
+  .workspace {
+    @apply mx-auto flex w-full max-w-7xl flex-col gap-7 px-5 py-8 md:px-9;
+  }
+  .page-heading {
+    @apply flex flex-col justify-between gap-4 sm:flex-row sm:items-end;
+  }
+  .eyebrow {
+    @apply mb-2 text-xs font-medium text-muted-foreground;
+  }
+  .page-heading h1 {
+    @apply text-2xl font-semibold tracking-tight;
+  }
+  .page-heading p {
+    @apply mt-2 text-sm text-muted-foreground;
+  }
+  .section-title {
+    @apply mb-4 text-sm font-semibold;
+  }
+  .metric-value {
+    @apply text-2xl font-semibold tracking-tight tabular-nums;
+  }
+  .text-income {
+    color: var(--income);
+  }
+}
+:root {
+  --income: oklch(0.43 0.09 165);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.982 0.002 260);
+  --border: oklch(0.925 0.004 260);
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  [data-slot="dialog-content"].editor-dialog {
+    @apply flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg;
+  }
+  .editor-dialog > [data-slot="dialog-header"] {
+    @apply shrink-0 border-b p-5 pr-12;
+  }
+  .editor-form {
+    @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+  }
+  .editor-fields {
+    @apply flex min-h-0 flex-col gap-5 overflow-y-auto p-5;
+  }
+  .editor-actions {
+    @apply flex shrink-0 justify-end gap-2 border-t bg-popover p-4;
+  }
+  .ledger-meta {
+    @apply text-xs text-muted-foreground;
+  }
+  .ledger-amount {
+    @apply shrink-0 text-right text-sm font-medium tabular-nums;
+  }
+}
+
+@layer utilities {
+  .auth-card [data-slot="card-header"] {
+    @apply gap-2;
+  }
+  .auth-card [data-slot="card-title"] {
+    @apply text-xl tracking-tight;
+  }
+  .auth-form {
+    @apply flex flex-col gap-6;
+  }
+  .auth-form [data-slot="field-group"] {
+    @apply gap-5;
+  }
+  .auth-form [data-slot="field"] {
+    @apply gap-2;
+  }
+  .auth-form [data-slot="input"],
+  .auth-form [data-slot="input-group"] {
+    @apply h-10;
+  }
+  .auth-form > :last-child {
+    @apply w-full;
+  }
+}

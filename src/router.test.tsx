@@ -28,10 +28,28 @@ describe("app routes", () => {
     expect(html).toContain('for="profile-name"');
     expect(html).toContain('type="email"');
   });
-  it("renders the existing app at the home route", async () => {
-    expect(await renderRoute("/")).toContain("Get started with Cloudflare");
+  it("renders registration with the required account fields", async () => {
+    const html = await renderRoute("/register");
+    expect(html).toContain("Create your account");
+    expect(html).toContain("Username");
+    expect(html).toContain("Reporting currency");
+    expect(html).toContain("Timezone");
   });
 
+  it("gates reset links without exposing a password form or schema errors", async () => {
+    const html = await renderRoute("/reset-password");
+    expect(html).toContain("This link is invalid");
+    expect(html).toContain("Request a new reset link");
+    expect(html).not.toContain('type="password"');
+    expect(html).not.toContain("regex");
+  });
+  it("does not show untouched login errors or a reset action", async () => {
+    const html = await renderRoute("/login");
+    expect(html).toContain("Sign in");
+    expect(html).not.toContain("Enter your password");
+    expect(html).not.toContain("Too small");
+    expect(html).not.toContain(">Reset<");
+  });
   it("renders a 404 with a link home for unknown URLs", async () => {
     const html = await renderRoute("/missing-page");
 

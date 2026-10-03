@@ -1,11 +1,20 @@
 import { Link } from "@tanstack/react-router";
-
+import { buttonVariants } from "./ui/button-variants";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyContent } from "./ui/empty";
 export function NotFound() {
   return (
-    <main>
-      <h1>Page not found</h1>
-      <p>The page you requested does not exist.</p>
-      <Link to="/">Return home</Link>
+    <main className="auth-layout">
+      <Empty>
+        <EmptyHeader>
+          <EmptyTitle>Page not found</EmptyTitle>
+          <EmptyDescription>The page you requested does not exist.</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Link className={buttonVariants({ variant: "outline" })} to="/">
+            Return home
+          </Link>
+        </EmptyContent>
+      </Empty>
     </main>
   );
 }

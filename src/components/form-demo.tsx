@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { ProfileForm } from "@/components/profile-form";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button-variants";
 
 export function FormDemo() {
   return (
     <main className="mx-auto flex max-w-lg flex-col items-start gap-6 p-6">
-      <Button variant="ghost" render={<Link to="/" />}>
+      <Link className={buttonVariants({ variant: "ghost" })} to="/">
         Back home
-      </Button>
+      </Link>
       <ProfileForm />
     </main>
   );
