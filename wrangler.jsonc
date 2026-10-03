@@ -12,7 +12,7 @@
     {
       "binding": "HYPERDRIVE",
       // Local-only placeholder. Replace with your real configuration ID before deploying.
-      "id": "f9bef1f863fd47e1bc46defadc412b55",
+      "id": "bbb98c38630241a3853dbaa70297936e",
       // Credential-free local default; override with the environment variable in .env.example.
       "localConnectionString": "postgres://postgres:postgres@127.0.0.1:5432/financial_os",
     },
