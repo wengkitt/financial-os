@@ -41,6 +41,46 @@ release. Add a tool name to select part of the graph. For example, run
   Pass Zod schemas directly to TanStack Form's validators through Standard Schema.
   Use date-fns within Zod refinements when validation requires date operations.
 
+## Database and migrations
+
+- Use **Drizzle ORM** for database access and **PostgreSQL hosted on Neon
+  (NeonDB)**. Define and export tables in `worker/db/schema.ts`; keep database
+  access and credentials on the server, outside the React client.
+- For deployments on **Cloudflare Workers**, use **Cloudflare Hyperdrive** with
+  the `HYPERDRIVE` binding in `wrangler.jsonc` and `nodejs_compat`. Use Drizzle's
+  `node-postgres` adapter with `pg` through `worker/db/index.ts`'s `withDatabase`
+  helper. It reads `env.HYPERDRIVE.connectionString`, creates a client per
+  request, and closes it after the operation. Do not share clients across
+  requests or use the Neon serverless driver with Hyperdrive. For other hosting
+  platforms, use the appropriate server-side Neon connection without requiring
+  Hyperdrive.
+- Use Neon's direct connection URL with TLS enabled (`sslmode=require`) for
+  Hyperdrive and migrations; disable Neon's connection pooling for these URLs
+  because Hyperdrive manages the runtime connection pool. Keep Hyperdrive query
+  caching disabled so financial data reads stay current.
+- Preserve the current environment separation: `.env`'s `DATABASE_URL` and
+  `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` target the Neon
+  **development branch**. Local Worker development uses the connection override
+  directly, bypassing Hyperdrive pooling and caching. The Hyperdrive ID in
+  `wrangler.jsonc` points to the **production branch** for deployed Workers.
+- Drizzle Kit reads `DATABASE_URL` through `drizzle.config.ts`, independently of
+  the Hyperdrive binding. Run `vp run db:generate` after schema changes, review
+  and commit the generated SQL and snapshots under `drizzle/`, and run
+  `vp run db:check`. Apply migrations with `vp run db:migrate` against the
+  intended branch; the default local configuration targets development.
+- When schema changes are needed in production, apply reviewed migrations
+  separately with the **production `DATABASE_URL`**, usually before deploying
+  dependent Worker code. Deployment does not run migrations, and migrations
+  are not needed for deployments without schema changes. Plan compatible schema
+  changes so the currently deployed code continues working during rollout.
+  Do not run migrations from Worker requests or silently retarget local `.env`
+  settings to production.
+- Deployed Workers obtain the runtime connection from the configured Hyperdrive
+  binding automatically; they do not use local `.env` URLs or need a
+  `DATABASE_URL` Worker secret. Keep real URLs and credentials out of committed
+  files, logs, public responses, and `VITE_` variables. See `README.md` and
+  `.env.example` for setup instructions.
+
 ## UI components
 
 - Use shadcn as the primary UI component system and follow the project's

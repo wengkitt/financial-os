@@ -7,6 +7,16 @@
   "name": "financial-os",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-26",
+  "compatibility_flags": ["nodejs_compat"],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      // Local-only placeholder. Replace with your real configuration ID before deploying.
+      "id": "f9bef1f863fd47e1bc46defadc412b55",
+      // Credential-free local default; override with the environment variable in .env.example.
+      "localConnectionString": "postgres://postgres:postgres@127.0.0.1:5432/financial_os",
+    },
+  ],
   "assets": {
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api", "/api/*"],

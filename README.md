@@ -1,5 +1,89 @@
 # React + TypeScript + Vite
 
+## PostgreSQL: Neon, Drizzle, and Hyperdrive
+
+The Worker uses Drizzle ORM's `node-postgres` adapter with `pg`. Hyperdrive
+maintains the connection pool between Cloudflare and Neon. It is recommended for
+this Workers deployment, although Neon can also be used without Hyperdrive via
+its serverless driver. See the
+[Cloudflare Drizzle guide](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-drivers-and-libraries/drizzle-orm/)
+and [Neon connection guide](https://developers.cloudflare.com/hyperdrive/examples/connect-to-postgres/postgres-database-providers/neon/).
+
+### Connect your database
+
+1. Create a Neon project and a development branch. Copy the **direct** connection
+   URL with connection pooling unchecked (the hostname should not contain
+   `-pooler`). Keep TLS enabled with `sslmode=require`. Hyperdrive handles pooling.
+2. Copy `.env.example` to `.env`. Set `DATABASE_URL` to the direct URL used by
+   Drizzle Kit. Set `CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_HYPERDRIVE` to
+   the development branch URL for the local Worker. Vite's Cloudflare plugin
+   loads this override from `.env`. The two URLs may point to different branches;
+   run migrations against the branch your Worker will use.
+3. Create a Hyperdrive configuration in the Cloudflare dashboard using the
+   production Neon direct URL and **disable query caching**. This keeps reads
+   current while retaining connection pooling. Alternatively, with Wrangler
+   authenticated, run these commands in your own terminal to use the URL from
+   your `.env`:
+
+   ```sh
+   set -a
+   source .env
+   set +a
+   vp run hyperdrive:create --connection-string="$DATABASE_URL"
+   ```
+
+4. Replace the all-zero placeholder `hyperdrive[0].id` in `wrangler.jsonc` with
+   the returned configuration ID, keeping the binding name `HYPERDRIVE`.
+   Run `vp run cf-typegen` after changing bindings. The placeholder supports
+   local development only; deployment requires a real configuration ID.
+5. Run `vp run dev`, then request `/api/health/db`. A successful `SELECT 1`
+   returns `{ "status": "ok" }`; connection/query failures return 503 with
+   `{ "status": "unavailable" }`. This endpoint needs no application tables.
+
+`.env` is ignored by Git. Never put a real connection URL into Wrangler config
+or a `VITE_` variable. Production database credentials are stored in Hyperdrive;
+the Worker does not need a `DATABASE_URL` secret. The committed local URL points
+to `127.0.0.1` with example credentials and is overridden by your `.env` setting.
+Local development connects directly to the database and does not emulate
+Hyperdrive's pooling or caching. See
+[Hyperdrive local development](https://developers.cloudflare.com/hyperdrive/configuration/local-development/).
+
+### Schema and migrations
+
+Define and export tables in `worker/db/schema.ts` using `drizzle-orm/pg-core`.
+The schema starts empty because no application tables have been specified yet.
+After defining your first table:
+
+```sh
+vp run db:generate
+# Review and commit the SQL and snapshots generated under drizzle/.
+vp run db:check
+vp run db:migrate
+```
+
+Generation works offline; migration and Studio require a valid `DATABASE_URL`
+in `.env` or the shell environment. `vp run db:studio` opens Drizzle Studio.
+Apply reviewed migrations against the intended Neon branch before deploying
+code that relies on them. Migrations run directly from the CLI, never from a
+Worker request. No migrations are generated or applied by build/deploy.
+
+Use the request-scoped helper in API handlers:
+
+```ts
+import { withDatabase } from "./db/index.ts";
+import { accounts } from "./db/schema.ts"; // Your own exported table.
+
+app.get("/api/accounts", async (c) => {
+  const rows = await withDatabase(c.env, (db) => db.select().from(accounts));
+  return c.json(rows);
+});
+```
+
+The helper closes the client even when connecting or querying fails. Use one
+callback for related queries and `db.transaction` for atomic writes. Do not
+share clients across Worker requests. Validate external inputs and query results
+with Zod, and add authorization before exposing application data endpoints.
+
 ## Routing
 
 The React app uses TanStack Router with file-based routes in `src/routes`.
