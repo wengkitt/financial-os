@@ -27,6 +27,7 @@
   },
   "vars": {
     "APP_ORIGIN": "https://financial-os.wkforge.workers.dev",
+    "EMAIL_FROM": "Financial OS <onboarding@resend.dev>",
   },
   "upload_source_maps": true,
   /**
