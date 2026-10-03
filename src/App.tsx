@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import { Button } from "./components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { apiNameQueryOptions } from "./queries/api-name";
 import reactLogo from "./assets/react.svg";
 import viteLogo from "./assets/vite.svg";
 import cloudflareLogo from "./assets/cloudflare.svg";
@@ -7,7 +11,7 @@ import "./App.css";
 
 function App() {
   const [count, setCount] = useState(0);
-  const [name, setName] = useState("unknown");
+  const nameQuery = useQuery(apiNameQueryOptions);
 
   return (
     <>
@@ -33,20 +37,25 @@ function App() {
           <li>
             <button
               className="counter"
-              onClick={() => {
-                fetch("/api/")
-                  .then((res) => res.json())
-                  .then((data) => setName(data.name))
-                  .catch((error: unknown) => {
-                    console.error("Failed to fetch name from API", error);
-                  });
-              }}
-              aria-label="get name"
+              onClick={() => void nameQuery.refetch()}
+              disabled={nameQuery.isFetching}
+              aria-label="Refresh name from API"
             >
-              Name from API is: {name}
+              {nameQuery.isFetching ? "Loading name…" : "Refresh name"}
             </button>
+            <p aria-live="polite">
+              {nameQuery.data
+                ? `Name from API is: ${nameQuery.data.name}`
+                : nameQuery.isPending
+                  ? "Loading name…"
+                  : "Name unavailable"}
+            </p>
+            {nameQuery.isError && <p role="alert">{nameQuery.error.message}. Try refreshing.</p>}
           </li>
         </ul>
+        <Button variant="outline" render={<Link to="/form-demo" />}>
+          Try the form demo
+        </Button>
       </section>
 
       <div className="ticks"></div>

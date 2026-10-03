@@ -3,14 +3,18 @@ import { defineConfig, lazyPlugins } from "vite-plus";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { tanstackRouter } from "@tanstack/router-plugin/vite";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   staged: {
     "*": "vp check --fix",
   },
-  fmt: {},
+  fmt: {
+    ignorePatterns: ["src/routeTree.gen.ts"],
+  },
   lint: {
+    ignorePatterns: ["src/routeTree.gen.ts"],
     plugins: ["react", "typescript", "oxc"],
     rules: {
       "react/rules-of-hooks": "error",
@@ -18,6 +22,7 @@ export default defineConfig(({ mode }) => ({
         "warn",
         {
           allowConstantExport: true,
+          allowExportNames: ["Route"],
         },
       ],
       "vite-plus/prefer-vite-plus-imports": "error",
@@ -33,7 +38,12 @@ export default defineConfig(({ mode }) => ({
       },
     ],
   },
-  plugins: lazyPlugins(() => [react(), ...(mode === "test" ? [] : [cloudflare()]), tailwindcss()]),
+  plugins: lazyPlugins(() => [
+    tanstackRouter({ target: "react", autoCodeSplitting: true }),
+    react(),
+    ...(mode === "test" ? [] : [cloudflare()]),
+    tailwindcss(),
+  ]),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
