@@ -25,6 +25,9 @@
   "observability": {
     "enabled": true,
   },
+  "vars": {
+    "APP_ORIGIN": "https://financial-os.wkforge.workers.dev",
+  },
   "upload_source_maps": true,
   /**
    * Smart Placement
