@@ -1,5 +1,20 @@
 # React + TypeScript + Vite
 
+## Worker API
+
+The Cloudflare Worker in `worker/index.ts` uses [Hono](https://hono.dev/docs/getting-started/cloudflare-workers).
+Run `vp run dev` to start the React app and Worker together. `GET /api` and
+`GET /api/` return `{ "name": "Cloudflare" }`. Unknown API routes return a JSON
+404 response. Wrangler sends `/api` and `/api/*` requests to the Worker first;
+other paths use the React static assets and SPA fallback.
+
+Add endpoints with `app.get("/api/example", (c) => c.json({ ok: true }))` in
+`worker/index.ts`. Cloudflare bindings are typed with the generated `Env` type
+and accessed through `c.env`. After changing bindings in `wrangler.jsonc`, run
+`vp run cf-typegen` to regenerate their types.
+
+Validate changes with `vp check`, `vp test`, and `vp run build`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
 
 Currently, two official plugins are available:

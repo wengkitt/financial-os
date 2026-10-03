@@ -5,7 +5,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   staged: {
     "*": "vp check --fix",
   },
@@ -33,10 +33,10 @@ export default defineConfig({
       },
     ],
   },
-  plugins: lazyPlugins(() => [react(), cloudflare(), tailwindcss()]),
+  plugins: lazyPlugins(() => [react(), ...(mode === "test" ? [] : [cloudflare()]), tailwindcss()]),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}));
