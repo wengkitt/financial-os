@@ -5,6 +5,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "financial-os",
+  "account_id": "d2c7563100ac1f12bf53495448190962",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-26",
   "compatibility_flags": ["nodejs_compat"],
